@@ -1,0 +1,178 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  UNION_ADMIN
+  DISTRICT_ADMIN
+  CHURCH_ADMIN
+  MEMBER
+  POLICE_VERIFIER
+}
+
+enum AttendanceStatus {
+  PENDING
+  APPROVED
+}
+
+model Union {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  districts   District[]
+  admins      User[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model District {
+  id        String    @id @default(cuid())
+  union     Union     @relation(fields: [unionId], references: [id], onDelete: Cascade)
+  unionId   String
+  name      String
+  location  String?
+  churches  Church[]
+  admins    User[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Church {
+  id        String    @id @default(cuid())
+  district  District  @relation(fields: [districtId], references: [id], onDelete: Cascade)
+  districtId String
+  name      String
+  location  String?
+  members   User[]    @relation("ChurchMembers")
+  districtPastor   User?     @relation("DistrictPastorChurches", fields: [districtPastorId], references: [id], onDelete: SetNull)
+  districtPastorId String?
+  sessions  UmugandaSession[]
+  passes    Pass[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model User {
+  id            String     @id @default(cuid())
+  username      String     @unique
+  nationalId    String     @unique
+  firstName     String
+  lastName      String
+  phoneNumber   String
+  email         String?    @unique
+  passwordHash  String
+  role          Role
+  isActive      Boolean    @default(true)
+  union         Union?     @relation(fields: [unionId], references: [id], onDelete: SetNull)
+  unionId       String?
+  district      District?  @relation(fields: [districtId], references: [id], onDelete: SetNull)
+  districtId    String?
+  church        Church?    @relation("ChurchMembers", fields: [churchId], references: [id], onDelete: SetNull)
+  churchId      String?
+  pastorChurches Church[]   @relation("DistrictPastorChurches")
+  attendance    AttendanceRecord[]
+  approvals     AttendanceRecord[] @relation("AttendanceApprovals")
+  createdSessions UmugandaSession[] @relation("SessionCreator")
+  memberPass    MemberPass?
+  verificationPass Pass? @relation("MemberVerificationPass")
+  passwordResetTokens PasswordResetToken[]
+  auditLogs     AuditLog[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
+
+model MemberPass {
+  id         String   @id @default(cuid())
+  member     User     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  memberId   String   @unique
+  token      String   @unique
+  qrPayload  String
+  expiresAt  DateTime?
+  smsSentAt  DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model UmugandaSession {
+  id          String             @id @default(cuid())
+  church      Church             @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  churchId    String
+  date        DateTime
+  theme       String?
+  createdBy   User?              @relation("SessionCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById String?
+  attendance  AttendanceRecord[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+model AttendanceRecord {
+  id            String            @id @default(cuid())
+  session       UmugandaSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId     String
+  member        User              @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  memberId      String
+  status        AttendanceStatus  @default(PENDING)
+  approvedBy    User?             @relation("AttendanceApprovals", fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedById  String?
+  pass          Pass?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@unique([sessionId, memberId])
+}
+
+model Pass {
+  id           String            @id @default(cuid())
+  attendance   AttendanceRecord? @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
+  attendanceId String?           @unique
+  member       User?             @relation("MemberVerificationPass", fields: [memberId], references: [id], onDelete: Cascade)
+  memberId     String?           @unique
+  church       Church?           @relation(fields: [churchId], references: [id], onDelete: SetNull)
+  churchId     String?
+  token        String            @unique
+  qrPayload    String
+  sessionDate  DateTime?
+  expiresAt    DateTime?
+  smsSentAt    DateTime?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId      String?
+  userName    String
+  userRole    Role?
+  action      String
+  ipAddress   String?
+  userAgent   String?
+  unionId     String?
+  districtId  String?
+  churchId    String?
+  details     Json?
+  createdAt   DateTime @default(now())
+
+  @@index([unionId, createdAt])
+  @@index([userRole, createdAt])
+  @@index([action])
+}

@@ -1,0 +1,2 @@
+-- Legacy migration intentionally left blank.
+-- The AuditLog table and indexes are defined in later migrations.
