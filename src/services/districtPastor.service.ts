@@ -6,6 +6,7 @@ import { DistrictModel } from "@/models/district.model";
 import { ChurchModel } from "@/models/church.model";
 import { ForbiddenError, NotFoundError, ConflictError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
+import { sendAccountCredentialsEmail } from "@/lib/email";
 
 const districtPastorSelect = {
   id: true,
@@ -123,6 +124,20 @@ export const createDistrictPastor = async (actor: User, input: CreateDistrictPas
       },
       select: districtPastorSelect,
     });
+
+    if (pastor.email) {
+      try {
+        await sendAccountCredentialsEmail({
+          to: pastor.email,
+          role: Role.DISTRICT_ADMIN,
+          firstName: pastor.firstName,
+          username: pastor.email,
+          password: input.password,
+        });
+      } catch (error) {
+        console.error("Failed to send district pastor credentials email", error);
+      }
+    }
 
     return { pastor };
   } catch (error) {

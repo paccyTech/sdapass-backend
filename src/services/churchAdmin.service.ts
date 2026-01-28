@@ -4,6 +4,7 @@ import { randomBytes } from "crypto";
 import { ChurchModel } from "@/models/church.model";
 import { UserModel } from "@/models/user.model";
 import { ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors";
+import { sendAccountCredentialsEmail } from "@/lib/email";
 import { hashPassword } from "@/services/auth.service";
 
 const churchAdminSelect = {
@@ -198,6 +199,20 @@ export const createChurchAdmin = async (actor: User, input: CreateChurchAdminInp
       },
       select: churchAdminSelect,
     });
+
+    if (admin.email) {
+      try {
+        await sendAccountCredentialsEmail({
+          to: admin.email,
+          role: Role.CHURCH_ADMIN,
+          firstName: admin.firstName,
+          username: admin.email,
+          password: input.password,
+        });
+      } catch (error) {
+        console.error("Failed to send church admin credentials email", error);
+      }
+    }
 
     return { admin };
   } catch (error: unknown) {

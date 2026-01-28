@@ -1,4 +1,6 @@
+import { Role } from '@prisma/client';
 import nodemailer from 'nodemailer';
+
 import { env } from './env';
 
 // Log environment variables for debugging
@@ -126,6 +128,74 @@ export const sendPasswordResetEmail = async (email: string, token: string, expir
   
   return sendEmail({
     to: email,
+    subject,
+    text,
+    html,
+  });
+};
+
+const resolveRoleLabel = (role: Role) => {
+  switch (role) {
+    case Role.UNION_ADMIN:
+      return 'Union Administrator';
+    case Role.DISTRICT_ADMIN:
+      return 'District Pastor';
+    case Role.CHURCH_ADMIN:
+      return 'Church Administrator';
+    default:
+      return 'Umuganda SDA account';
+  }
+};
+
+type SendAccountCredentialsEmailOptions = {
+  to: string;
+  role: Role;
+  firstName?: string | null;
+  username: string;
+  password: string;
+};
+
+export const sendAccountCredentialsEmail = async ({
+  to,
+  role,
+  firstName,
+  username,
+  password,
+}: SendAccountCredentialsEmailOptions) => {
+  const loginUrl = `${env.PRIMARY_ORIGIN || 'http://localhost:3000'}/login`;
+  const roleLabel = resolveRoleLabel(role);
+  const greetingName = firstName?.trim() || 'there';
+
+  const subject = `Your ${roleLabel} credentials`;
+  const text = [
+    `Hello ${greetingName},`,
+    '',
+    `An Umuganda SDA ${roleLabel.toLowerCase()} account has been created for you.`,
+    `Visit ${loginUrl} and sign in with:`,
+    `Username: ${username}`,
+    `Temporary password: ${password}`,
+    '',
+    'For security, please sign in and change this password immediately.',
+    '',
+    'If you did not expect this email, contact your administrator.',
+  ].join('\n');
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <p style="font-size: 1rem;">Hello ${greetingName},</p>
+      <p>An Umuganda SDA ${roleLabel.toLowerCase()} account has been created for you.</p>
+      <p style="margin-bottom: 12px;">Use the credentials below to sign in:</p>
+      <div style="background: #f7fafc; padding: 16px; border-radius: 8px; line-height: 1.6;">
+        <div><strong>Username:</strong> ${username}</div>
+        <div><strong>Temporary password:</strong> ${password}</div>
+      </div>
+      <p style="margin: 16px 0;">Visit <a href="${loginUrl}" style="color: #2b6cb0;">${loginUrl}</a> to sign in and please change this password immediately after logging in.</p>
+      <p style="color: #4a5568; font-size: 0.95rem;">If you did not expect this email, contact your administrator.</p>
+    </div>
+  `;
+
+  return sendEmail({
+    to,
     subject,
     text,
     html,
