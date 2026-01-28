@@ -37,3 +37,7 @@ export const POST = createHandler({
   ],
   controller: createAttendanceController,
 });
+
+export const OPTIONS = createHandler({
+  controller: async () => new NextResponse(null, { status: 204 }),
+});

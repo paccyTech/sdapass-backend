@@ -20,6 +20,7 @@ const createMemberSchema = z.object({
   lastName: z.string().min(1, "Last name is required"),
   phoneNumber: z.string().min(1, "Phone number is required"),
   email: z.string().email().optional(),
+  password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
 export const GET = createHandler({

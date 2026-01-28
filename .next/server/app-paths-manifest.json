@@ -1,4 +1,8 @@
 {
   "/api/auth/login/route": "app/api/auth/login/route.js",
-  "/api/members/[memberId]/pass/route": "app/api/members/[memberId]/pass/route.js"
+  "/api/districts/route": "app/api/districts/route.js",
+  "/api/churches/route": "app/api/churches/route.js",
+  "/api/unions/stats/route": "app/api/unions/stats/route.js",
+  "/api/district-pastors/route": "app/api/district-pastors/route.js",
+  "/api/unions/route": "app/api/unions/route.js"
 }

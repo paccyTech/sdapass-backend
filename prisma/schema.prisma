@@ -63,7 +63,7 @@ model User {
   nationalId    String     @unique
   firstName     String
   lastName      String
-  phoneNumber   String
+  phoneNumber   String     @unique
   email         String?    @unique
   passwordHash  String
   role          Role

@@ -91,11 +91,11 @@ export interface CreateMemberInput {
   lastName: string;
   phoneNumber: string;
   email?: string | null;
+  password: string;
 }
 
 export interface CreateMemberResult {
   member: MemberSummary;
-  initialPassword: string;
   memberPass: {
     id: string;
     token: string;
@@ -105,11 +105,6 @@ export interface CreateMemberResult {
 }
 
 const DEFAULT_FRONTEND_URL = env.CORS_ORIGIN || "http://localhost:3000";
-
-const generateTemporaryPassword = (): string => {
-  const buffer = crypto.randomBytes(12);
-  return buffer.toString("base64url");
-};
 
 export interface UpdateMemberInput {
   firstName?: string;
@@ -415,8 +410,19 @@ export const createMember = async (user: User, input: CreateMemberInput): Promis
     throw new NotFoundError("Church not found");
   }
 
-  const temporaryPassword = generateTemporaryPassword();
-  const passwordHash = await hashPassword(temporaryPassword);
+  if (input.email) {
+    const existingByEmail = await UserModel.findByEmail(input.email);
+    if (existingByEmail) {
+      throw new ConflictError("A user with this email already exists");
+    }
+  }
+
+  const existingByPhone = await UserModel.findByPhoneNumber(input.phoneNumber);
+  if (existingByPhone) {
+    throw new ConflictError("A user with this phone number already exists");
+  }
+
+  const passwordHash = await hashPassword(input.password);
 
   try {
     const member = (await UserModel.create({
@@ -473,7 +479,7 @@ export const createMember = async (user: User, input: CreateMemberInput): Promis
       const message = [
         `Murakaza neza mu Umuganda SDA, ${member.firstName}.`,
         `Injira kuri ${loginUrl} ukoresheje iri nambara y'indangamuntu: ${member.nationalId}.`,
-        `Ijambo ry'ibanga ry'agateganyo: ${temporaryPassword}.`,
+        `Ijambo ry'ibanga wahawe: ${input.password}.`,
         `Ikarita yawe ya QR iri hano: ${passUrl}.`,
       ].join(" ");
 
@@ -499,7 +505,6 @@ export const createMember = async (user: User, input: CreateMemberInput): Promis
         smsSentAt: memberPassRecord.smsSentAt,
         expiresAt: memberPassRecord.expiresAt,
       }),
-      initialPassword: temporaryPassword,
       memberPass: {
         id: memberPassRecord.id,
         token: passToken,

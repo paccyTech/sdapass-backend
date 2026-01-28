@@ -20,6 +20,7 @@ const createDistrictPastorSchema = z.object({
   phoneNumber: z.string().min(6),
   email: z.string().email(),
   districtId: z.string().min(1),
+  password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
 export const GET = createHandler({

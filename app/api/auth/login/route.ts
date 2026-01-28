@@ -9,15 +9,15 @@ import { loginController } from "@/controllers/auth.controller";
 const loginSchema = z
   .object({
     email: z.string().email("Valid email is required").optional(),
-    nationalId: z.string().min(1, "National ID is required").optional(),
+    phoneNumber: z.string().min(1, "Phone number is required").optional(),
     password: z.string().min(1, "Password is required"),
   })
-  .refine((data) => Boolean(data.email || data.nationalId), {
-    message: "Email or national ID is required",
+  .refine((data) => Boolean(data.email || data.phoneNumber), {
+    message: "Email or phone number is required",
     path: ["email"],
   })
-  .refine((data) => !(data.email && data.nationalId), {
-    message: "Provide either email or national ID, not both",
+  .refine((data) => !(data.email && data.phoneNumber), {
+    message: "Provide either email or phone number, not both",
     path: ["email"],
   });
 

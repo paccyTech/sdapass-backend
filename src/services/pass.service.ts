@@ -47,7 +47,11 @@ const passWithRelationsInclude = {
     },
   },
   member: {
-    include: {
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      nationalId: true,
       church: {
         select: {
           id: true,
@@ -197,12 +201,41 @@ export const verifyPassToken = async (token: string) => {
     passWithRelations.sessionDate ??
     passWithRelations.createdAt;
 
+  // Get member details if available
+  let member = null;
+  if (passWithRelations.member) {
+    member = {
+      firstName: passWithRelations.member.firstName,
+      lastName: passWithRelations.member.lastName,
+      nationalId: passWithRelations.member.nationalId
+    };
+  } else {
+    // If member is not included in the relations, fetch it separately
+    const memberRecord = await prisma.user.findUnique({
+      where: { id: passWithRelations.memberId },
+      select: {
+        firstName: true,
+        lastName: true,
+        nationalId: true,
+      },
+    });
+    
+    if (memberRecord) {
+      member = {
+        firstName: memberRecord.firstName,
+        lastName: memberRecord.lastName,
+        nationalId: memberRecord.nationalId
+      };
+    }
+  }
+
   return {
     valid: true,
     passId: passWithRelations.id,
     issuedAt: passWithRelations.createdAt,
     sessionDate,
     church,
+    member,
   } as const;
 };
 

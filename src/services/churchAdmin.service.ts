@@ -26,6 +26,17 @@ const churchAdminSelect = {
   createdAt: true,
 } satisfies Prisma.UserSelect;
 
+type ChurchWithDistrict = Prisma.ChurchGetPayload<{
+  include: {
+    district: {
+      select: {
+        id: true;
+        unionId: true;
+      };
+    };
+  };
+}>;
+
 export interface ChurchAdminFilters {
   districtId?: string;
   churchId?: string;
@@ -37,6 +48,7 @@ export interface CreateChurchAdminInput {
   lastName: string;
   phoneNumber: string;
   email: string;
+  password: string;
 }
 
 export interface UpdateChurchAdminInput {
@@ -54,26 +66,37 @@ const ensureActorCanManageChurchAdmins = (actor: User) => {
   }
 };
 
-const ensureChurchWithinScope = async (actor: User, churchId: string) => {
-  const church = await ChurchModel.findById(churchId, {
-    select: {
-      id: true,
-      districtId: true,
-      district: {
-        select: {
-          id: true,
-          unionId: true,
+const ensureChurchWithinScope = async (
+  actor: User,
+  churchId: string,
+): Promise<ChurchWithDistrict> => {
+  const churchRecord = (await ChurchModel.findById(
+    churchId,
+    {
+      include: {
+        district: {
+          select: {
+            id: true,
+            unionId: true,
+          },
         },
       },
-    },
-  });
+    } as Prisma.ChurchFindUniqueArgs,
+  )) as ChurchWithDistrict | null;
 
-  if (!church) {
+  if (!churchRecord) {
     throw new NotFoundError("Church not found");
   }
 
+  const church = churchRecord;
+  const district = church.district;
+
+  if (!district) {
+    throw new NotFoundError("Church is missing district context");
+  }
+
   if (actor.role === Role.UNION_ADMIN) {
-    if (actor.unionId && actor.unionId !== church.district.unionId) {
+    if (actor.unionId && actor.unionId !== district.unionId) {
       throw new ForbiddenError("Church is outside your union");
     }
     return church;
@@ -106,8 +129,6 @@ const ensureAdminWithinScope = (actor: User, admin: { unionId: string | null; di
 
   throw new ForbiddenError("Not allowed to manage this administrator");
 };
-
-const generateInitialPassword = () => randomBytes(6).toString("base64url");
 
 export const listChurchAdmins = async (actor: User, filters: ChurchAdminFilters = {}) => {
   ensureActorCanManageChurchAdmins(actor);
@@ -147,8 +168,17 @@ export const createChurchAdmin = async (actor: User, input: CreateChurchAdminInp
 
   const church = await ensureChurchWithinScope(actor, input.churchId);
 
-  const initialPassword = generateInitialPassword();
-  const passwordHash = await hashPassword(initialPassword);
+  const existingByEmail = await UserModel.findByEmail(input.email);
+  if (existingByEmail) {
+    throw new ConflictError("Email already in use");
+  }
+
+  const existingByPhone = await UserModel.findByPhoneNumber(input.phoneNumber);
+  if (existingByPhone) {
+    throw new ConflictError("Phone number already in use");
+  }
+
+  const passwordHash = await hashPassword(input.password);
 
   try {
     const admin = await UserModel.create({
@@ -169,7 +199,7 @@ export const createChurchAdmin = async (actor: User, input: CreateChurchAdminInp
       select: churchAdminSelect,
     });
 
-    return { admin, initialPassword };
+    return { admin };
   } catch (error: unknown) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -208,22 +238,37 @@ export const updateChurchAdmin = async (actor: User, adminId: string, input: Upd
 
   ensureAdminWithinScope(actor, existing);
 
-  let nextChurchId = existing.churchId ?? undefined;
-  let nextDistrictId = existing.districtId ?? undefined;
-  let nextUnionId = existing.unionId ?? undefined;
+  let nextChurchId = existing.churchId ?? null;
+  let nextDistrictId = existing.districtId ?? null;
+  let nextUnionId = existing.unionId ?? null;
 
   if (input.churchId) {
     const church = await ensureChurchWithinScope(actor, input.churchId);
+    const district = church.district;
     nextChurchId = church.id;
     nextDistrictId = church.districtId;
-    nextUnionId = church.district.unionId;
+    nextUnionId = district.unionId;
   }
 
-  const data: Prisma.UserUpdateInput = {
-    churchId: nextChurchId,
-    districtId: nextDistrictId,
-    unionId: nextUnionId,
-  };
+  const data: Prisma.UserUpdateInput = {};
+
+  if (nextChurchId) {
+    data.church = { connect: { id: nextChurchId } };
+  } else {
+    data.church = { disconnect: true };
+  }
+
+  if (nextDistrictId) {
+    data.district = { connect: { id: nextDistrictId } };
+  } else {
+    data.district = { disconnect: true };
+  }
+
+  if (nextUnionId) {
+    data.union = { connect: { id: nextUnionId } };
+  } else {
+    data.union = { disconnect: true };
+  }
 
   if (input.firstName !== undefined) {
     data.firstName = input.firstName;

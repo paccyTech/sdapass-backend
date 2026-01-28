@@ -72,26 +72,26 @@ export const getUserFromToken = async (token: string): Promise<User> => {
 
 type CredentialInput = {
   email?: string;
-  nationalId?: string;
+  phoneNumber?: string;
   password: string;
 };
 
 export const authenticateWithCredentials = async ({
   email,
-  nationalId,
+  phoneNumber,
   password,
 }: CredentialInput) => {
   let user: User | null = null;
 
-  if (nationalId) {
-    user = await UserModel.findByNationalId(nationalId);
+  if (phoneNumber) {
+    user = await UserModel.findByPhoneNumber(phoneNumber);
 
     if (!user || !user.isActive) {
       throw new UnauthorizedError("Invalid credentials");
     }
 
     if (user.role !== Role.MEMBER) {
-      throw new UnauthorizedError("National ID login is restricted to members");
+      throw new UnauthorizedError("Phone number login is restricted to members");
     }
   } else if (email) {
     user = await UserModel.findByEmail(email);
@@ -101,10 +101,10 @@ export const authenticateWithCredentials = async ({
     }
 
     if (user.role === Role.MEMBER) {
-      throw new UnauthorizedError("Members must sign in with their national ID");
+      throw new UnauthorizedError("Members must sign in with their phone number");
     }
   } else {
-    throw new UnauthorizedError("Email or national ID is required");
+    throw new UnauthorizedError("Email or phone number is required");
   }
 
   const validPassword = await verifyPassword(password, user.passwordHash);

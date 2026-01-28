@@ -14,6 +14,15 @@ export const UserModel = {
   findByEmail: (email: string, args?: UserFindUniqueArgsWithoutWhere) =>
     prisma.user.findUnique({ where: { email }, ...(args ?? {}) }),
 
+  findByPhoneNumber: (
+    phoneNumber: string,
+    args?: UserFindUniqueArgsWithoutWhere,
+  ) =>
+    prisma.user.findUnique({
+      where: { phoneNumber } as Prisma.UserWhereUniqueInput,
+      ...(args ?? {}),
+    }),
+
   findByNationalId: (nationalId: string, args?: UserFindUniqueArgsWithoutWhere) =>
     prisma.user.findUnique({ where: { nationalId }, ...(args ?? {}) }),
 

@@ -1,5 +1,4 @@
-import { Role, type Prisma, type User } from "@prisma/client";
-import { randomBytes } from "crypto";
+import { Prisma, Role, type User } from "@prisma/client";
 
 import { hashPassword } from "@/services/auth.service";
 import { UserModel } from "@/models/user.model";
@@ -43,6 +42,7 @@ export interface CreateDistrictPastorInput {
   phoneNumber: string;
   email: string;
   districtId: string;
+  password: string;
 }
 
 export interface UpdateDistrictPastorInput {
@@ -79,10 +79,6 @@ export const listDistrictPastors = async (actor: User, filters: DistrictPastorFi
   });
 };
 
-const generateInitialPassword = () => {
-  return randomBytes(6).toString("base64url");
-};
-
 export const createDistrictPastor = async (actor: User, input: CreateDistrictPastorInput) => {
   assertUnionAdmin(actor);
 
@@ -98,8 +94,17 @@ export const createDistrictPastor = async (actor: User, input: CreateDistrictPas
     throw new ForbiddenError("District does not belong to your union");
   }
 
-  const initialPassword = generateInitialPassword();
-  const passwordHash = await hashPassword(initialPassword);
+  const existingByEmail = await UserModel.findByEmail(input.email);
+  if (existingByEmail) {
+    throw new ConflictError("Email already in use");
+  }
+
+  const existingByPhone = await UserModel.findByPhoneNumber(input.phoneNumber);
+  if (existingByPhone) {
+    throw new ConflictError("Phone number already in use");
+  }
+
+  const passwordHash = await hashPassword(input.password);
 
   try {
     const pastor = await UserModel.create({
@@ -119,7 +124,7 @@ export const createDistrictPastor = async (actor: User, input: CreateDistrictPas
       select: districtPastorSelect,
     });
 
-    return { pastor, initialPassword };
+    return { pastor };
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&

@@ -4,7 +4,7 @@ import { recordAuditLog } from "@/services/audit-log.service";
 
 export type LoginRequestBody = {
   email?: string;
-  nationalId?: string;
+  phoneNumber?: string;
   password: string;
 };
 
@@ -13,11 +13,11 @@ export const loginController = async (context: BodyContext<LoginRequestBody>) =>
     throw new Error("Missing request body");
   }
 
-  const { email, nationalId, password } = context.body;
+  const { email, phoneNumber, password } = context.body;
 
   const { token, user } = await authenticateWithCredentials({
     email,
-    nationalId,
+    phoneNumber,
     password,
   });
 
@@ -26,7 +26,7 @@ export const loginController = async (context: BodyContext<LoginRequestBody>) =>
     user,
     action: "auth.login",
     details: {
-      via: email ? "email" : "nationalId",
+      via: email ? "email" : "phoneNumber",
     },
   });
 

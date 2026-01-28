@@ -21,6 +21,7 @@ const createSchema = z.object({
   lastName: z.string().min(1, "Last name is required"),
   phoneNumber: z.string().min(6, "Phone number is required"),
   email: z.string().email("Valid email is required"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
 export const GET = createHandler({
