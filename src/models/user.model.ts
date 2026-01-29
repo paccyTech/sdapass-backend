@@ -30,7 +30,9 @@ export const UserModel = {
 
   count: (args?: Prisma.UserCountArgs) => prisma.user.count(args),
 
-  create: (args: Prisma.UserCreateArgs) => prisma.user.create(args),
+  create: <T extends Prisma.UserCreateArgs>(
+    args: Prisma.SelectSubset<T, Prisma.UserCreateArgs>,
+  ) => prisma.user.create<T>(args),
 
   update: (args: Prisma.UserUpdateArgs) => prisma.user.update(args),
 

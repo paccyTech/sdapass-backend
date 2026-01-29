@@ -7,6 +7,7 @@ import { PassModel } from "@/models/pass.model";
 import { ForbiddenError, NotFoundError, ConflictError } from "@/lib/errors";
 import { hashPassword } from "@/services/auth.service";
 import { generateQrPayload } from "@/utils/qr";
+import { sendMemberWelcomeEmail, sendAccountCredentialsEmail } from "@/lib/email";
 import { sendSms } from "@/lib/sms";
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
@@ -496,6 +497,26 @@ export const createMember = async (user: User, input: CreateMemberInput): Promis
       } catch (smsError) {
         // Log and continue without failing member creation
         console.error("Failed to send member onboarding SMS", smsError);
+      }
+    }
+
+    if (member.email) {
+      try {
+        await sendMemberWelcomeEmail({
+          to: member.email,
+          firstName: member.firstName,
+          lastName: member.lastName,
+          phoneNumber: member.phoneNumber,
+          password: input.password,
+          nationalId: member.nationalId,
+          churchName: member.church?.name ?? null,
+          loginUrl,
+          passUrl,
+          qrPayload,
+          passToken,
+        });
+      } catch (emailError) {
+        console.error("Failed to send member welcome email", emailError);
       }
     }
 

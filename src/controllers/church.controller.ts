@@ -2,6 +2,7 @@ import type {
   AuthenticatedBodyContext,
   AuthenticatedQueryContext,
 } from "@/middlewares/types";
+import type { Prisma } from "@prisma/client";
 import {
   createChurch,
   deleteChurch,
@@ -51,19 +52,26 @@ export const updateChurchController = async (
     throw new Error("Church id is required");
   }
 
-  const changes = context.body ?? {};
+  const changes: UpdateChurchInput = context.body ?? {};
   const church = await updateChurch(context.user, context.params.churchId, changes);
+
+  const sanitizedChanges = Object.fromEntries(
+    Object.entries(changes).filter(([, value]) => value !== undefined),
+  ) as Prisma.InputJsonObject;
+
+  const auditDetails = {
+    churchId: church.id,
+    name: church.name,
+    districtId: church.districtId,
+    location: church.location,
+    ...(Object.keys(sanitizedChanges).length > 0 ? { changes: sanitizedChanges } : {}),
+  } satisfies Prisma.InputJsonObject;
 
   await recordAuditLog({
     req: context.req,
     user: context.user,
     action: "church.update",
-    details: {
-      churchId: church.id,
-      name: church.name,
-      districtId: church.districtId,
-      changes,
-    },
+    details: auditDetails,
   });
   return { church };
 };

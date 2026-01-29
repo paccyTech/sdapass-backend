@@ -8,6 +8,7 @@ import {
   deleteMemberController,
   updateMemberController,
 } from "@/controllers/member.controller";
+import { paramsSchemaMiddleware } from "@/middlewares/params.middleware";
 
 const updateMemberSchema = z.object({
   firstName: z.string().min(1).optional(),
@@ -16,16 +17,21 @@ const updateMemberSchema = z.object({
   email: z.string().email().optional(),
 });
 
+const memberParamsSchema = z.object({
+  memberId: z.string().min(1, "Member id is required"),
+});
+
 export const PATCH = createHandler({
   middlewares: [
     requireAuthMiddleware(["CHURCH_ADMIN"]),
+    paramsSchemaMiddleware(memberParamsSchema),
     jsonBodyMiddleware(updateMemberSchema.partial({})),
   ],
   controller: updateMemberController,
 });
 
 export const DELETE = createHandler({
-  middlewares: [requireAuthMiddleware(["CHURCH_ADMIN"])],
+  middlewares: [requireAuthMiddleware(["CHURCH_ADMIN"]), paramsSchemaMiddleware(memberParamsSchema)],
   controller: deleteMemberController,
 });
 
