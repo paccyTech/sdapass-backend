@@ -1,3 +1,4 @@
+import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createHandler } from "@/lib/route";
 import { requireAuthMiddleware } from "@/middlewares/auth.middleware";

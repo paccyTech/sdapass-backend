@@ -26,6 +26,7 @@ model Union {
   description String?
   districts   District[]
   admins      User[]
+  umugandaEvents UmugandaEvent[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 }
@@ -53,6 +54,7 @@ model Church {
   districtPastorId String?
   sessions  UmugandaSession[]
   passes    Pass[]
+  umugandaEventAttendance UmugandaEventAttendance[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 }
@@ -82,8 +84,40 @@ model User {
   verificationPass Pass? @relation("MemberVerificationPass")
   passwordResetTokens PasswordResetToken[]
   auditLogs     AuditLog[]
+  createdUmugandaEvents UmugandaEvent[] @relation("UmugandaEventCreator")
+  umugandaEventAttendance UmugandaEventAttendance[]
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
+}
+
+model UmugandaEvent {
+  id          String   @id @default(cuid())
+  union       Union    @relation(fields: [unionId], references: [id], onDelete: Cascade)
+  unionId     String
+  date        DateTime
+  theme       String?
+  location    String?
+  createdBy   User?    @relation("UmugandaEventCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById String?
+  attendance  UmugandaEventAttendance[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([unionId, date])
+}
+
+model UmugandaEventAttendance {
+  id          String        @id @default(cuid())
+  event       UmugandaEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId     String
+  member      User          @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  memberId    String
+  church      Church        @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  churchId    String
+  checkedInAt DateTime      @default(now())
+
+  @@unique([eventId, memberId])
+  @@index([churchId, checkedInAt])
 }
 
 model MemberPass {

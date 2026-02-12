@@ -4,6 +4,7 @@ import type {
   AuthenticatedParamsContext,
   AuthenticatedQueryContext,
 } from "@/middlewares/types";
+import type { Prisma } from "@prisma/client";
 import {
   createChurchAdmin,
   deleteChurchAdmin,
@@ -62,7 +63,7 @@ export const updateChurchAdminController = async (
     details: {
       adminId: result.admin.id,
       churchId: result.admin.churchId,
-      changes,
+      changes: changes as Prisma.InputJsonValue,
     },
   });
   return result;

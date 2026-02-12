@@ -128,3 +128,23 @@ export const authenticateWithCredentials = async ({
     user: safeUser as AuthUser,
   } satisfies { token: string; user: AuthUser };
 };
+
+export const changePassword = async (user: User, input: { currentPassword: string; newPassword: string }) => {
+  const validPassword = await verifyPassword(input.currentPassword, user.passwordHash);
+  if (!validPassword) {
+    throw new UnauthorizedError("Invalid current password");
+  }
+
+  const passwordHash = await hashPassword(input.newPassword);
+
+  const updated = await prisma.user.update({
+    where: { id: user.id },
+    data: { passwordHash },
+  });
+
+  const { passwordHash: _passwordHash, ...safeUser } = updated;
+
+  return {
+    user: safeUser as AuthUser,
+  };
+};

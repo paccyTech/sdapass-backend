@@ -1,5 +1,5 @@
-import type { BodyContext } from "@/middlewares/types";
-import { authenticateWithCredentials } from "@/services/auth.service";
+import type { AuthenticatedBodyContext, BodyContext } from "@/middlewares/types";
+import { authenticateWithCredentials, changePassword } from "@/services/auth.service";
 import { recordAuditLog } from "@/services/audit-log.service";
 
 export type LoginRequestBody = {
@@ -34,4 +34,25 @@ export const loginController = async (context: BodyContext<LoginRequestBody>) =>
     token,
     user,
   };
+};
+
+export type ChangePasswordRequestBody = {
+  currentPassword: string;
+  newPassword: string;
+};
+
+export const changePasswordController = async (context: AuthenticatedBodyContext<ChangePasswordRequestBody>) => {
+  if (!context.body) {
+    throw new Error("Missing request body");
+  }
+
+  await changePassword(context.user, context.body);
+
+  await recordAuditLog({
+    req: context.req,
+    user: context.user,
+    action: "auth.change_password",
+  });
+
+  return { success: true };
 };
