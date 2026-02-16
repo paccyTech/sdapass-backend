@@ -2,8 +2,9 @@
   "name": "sda-backend",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "prisma": {
-    "seed": "node scripts/seed.js"
+    "seed": "node --loader ts-node/esm --no-warnings ./scripts/seed.ts"
   },
   "scripts": {
     "dev": "next dev -p 5000",
@@ -12,7 +13,7 @@
     "lint": "next lint",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:seed": "ts-node --project ./tsconfig.json ./scripts/seed.ts",
+    "prisma:seed": "node --loader ts-node/esm --no-warnings ./scripts/seed.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },

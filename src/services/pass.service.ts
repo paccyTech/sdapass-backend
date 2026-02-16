@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import type { Prisma } from "@prisma/client";
+import { AttendanceStatus, type Prisma, type User } from "@prisma/client";
 
 import { PassModel } from "@/models/pass.model";
 import { AttendanceModel } from "@/models/attendance.model";
@@ -123,7 +123,85 @@ export const issuePassForAttendance = async (attendanceId: string) => {
   return pass;
 };
 
-export const verifyPassToken = async (token: string) => {
+const getDayRange = (date: Date) => {
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  return { start, end };
+};
+
+const ensureSessionForChurchOnDate = async (churchId: string, date: Date) => {
+  const { start, end } = getDayRange(date);
+
+  const existing = await prisma.umugandaSession.findFirst({
+    where: {
+      churchId,
+      date: {
+        gte: start,
+        lt: end,
+      },
+    },
+    select: { id: true, churchId: true, date: true },
+    orderBy: { date: "desc" },
+  });
+
+  if (existing) {
+    return existing;
+  }
+
+  return prisma.umugandaSession.create({
+    data: {
+      churchId,
+      date: start,
+      theme: null,
+      createdById: null,
+    },
+    select: { id: true, churchId: true, date: true },
+  });
+};
+
+const upsertAttendanceForScan = async (memberId: string, churchId: string, scannedAt: Date) => {
+  const session = await ensureSessionForChurchOnDate(churchId, scannedAt);
+
+  return prisma.attendanceRecord.upsert({
+    where: {
+      sessionId_memberId: {
+        sessionId: session.id,
+        memberId,
+      },
+    },
+    update: {
+      status: AttendanceStatus.APPROVED,
+    },
+    create: {
+      sessionId: session.id,
+      memberId,
+      status: AttendanceStatus.APPROVED,
+      approvedById: null,
+    },
+    select: {
+      id: true,
+      status: true,
+      createdAt: true,
+      updatedAt: true,
+      session: {
+        select: {
+          id: true,
+          date: true,
+          church: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      },
+    },
+  });
+};
+
+export const verifyPassToken = async (user: User, token: string) => {
   let pass = await PassModel.findByToken(token, {
     include: passWithRelationsInclude,
   });
@@ -200,6 +278,20 @@ export const verifyPassToken = async (token: string) => {
     passWithRelations.attendance?.session.date ??
     passWithRelations.sessionDate ??
     passWithRelations.createdAt;
+
+  if (user.role === "POLICE_VERIFIER") {
+    const resolvedChurchId =
+      passWithRelations.attendance?.session.church?.id ??
+      passWithRelations.church?.id ??
+      passWithRelations.member?.church?.id ??
+      null;
+
+    const resolvedMemberId = passWithRelations.member?.id ?? passWithRelations.memberId ?? null;
+
+    if (resolvedMemberId && resolvedChurchId) {
+      await upsertAttendanceForScan(resolvedMemberId, resolvedChurchId, new Date());
+    }
+  }
 
   // Get member details if available
   let member = null;

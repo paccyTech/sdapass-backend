@@ -268,3 +268,41 @@ export const updateAttendance = async (
 
   return { attendance: updated };
 };
+
+export const listAttendanceForMember = async (memberId: string) => {
+  console.log('listAttendanceForMember called with memberId:', memberId);
+  const records = await AttendanceModel.findMany({
+    where: { memberId },
+    include: {
+      session: {
+        select: {
+          id: true,
+          date: true,
+          church: {
+            select: {
+              id: true,
+              name: true,
+              districtId: true,
+            },
+          },
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  console.log('Found records:', records.length);
+
+  // Map to MemberAttendance interface
+  return records.map(record => ({
+    id: record.id,
+    date: record.session.date,
+    status: record.status === AttendanceStatus.APPROVED ? 'Present' : record.status === AttendanceStatus.PENDING ? 'Excused' : 'Absent',
+    theme: 'Umuganda Session',
+    hours: 1,
+    church: {
+      id: record.session.church.id,
+      name: record.session.church.name,
+    },
+  }));
+};

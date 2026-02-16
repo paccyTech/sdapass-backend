@@ -1,9 +1,82 @@
-import type { Prisma, User } from "@prisma/client";
+import { AttendanceStatus, type Prisma, type User } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { ForbiddenError, NotFoundError, ConflictError } from "@/lib/errors";
 import { UmugandaEventModel } from "@/models/umugandaEvent.model";
 import { UmugandaEventAttendanceModel } from "@/models/umugandaEventAttendance.model";
+
+const getDayRange = (date: Date) => {
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  return { start, end };
+};
+
+const ensureSessionForChurchOnDate = async (
+  churchId: string,
+  date: Date,
+  createdById: string,
+  theme?: string | null,
+) => {
+  const { start, end } = getDayRange(date);
+
+  const existing = await prisma.umugandaSession.findFirst({
+    where: {
+      churchId,
+      date: {
+        gte: start,
+        lt: end,
+      },
+    },
+    select: { id: true },
+    orderBy: { date: "desc" },
+  });
+
+  if (existing) {
+    return existing;
+  }
+
+  return prisma.umugandaSession.create({
+    data: {
+      churchId,
+      date: start,
+      theme: theme ?? null,
+      createdById,
+    },
+    select: { id: true },
+  });
+};
+
+const upsertAttendanceForEventCheckIn = async (
+  memberId: string,
+  churchId: string,
+  eventDate: Date,
+  checkedInById: string,
+  eventTheme?: string | null,
+) => {
+  const session = await ensureSessionForChurchOnDate(churchId, eventDate, checkedInById, eventTheme);
+
+  return prisma.attendanceRecord.upsert({
+    where: {
+      sessionId_memberId: {
+        sessionId: session.id,
+        memberId,
+      },
+    },
+    update: {
+      status: AttendanceStatus.APPROVED,
+      approvedById: checkedInById,
+    },
+    create: {
+      sessionId: session.id,
+      memberId,
+      status: AttendanceStatus.APPROVED,
+      approvedById: checkedInById,
+    },
+    select: { id: true },
+  });
+};
 
 const eventInclude = {
   union: {
@@ -431,12 +504,62 @@ export const checkInToUmugandaEvent = async (user: User, input: CheckInToUmugand
       },
     });
 
+    await upsertAttendanceForEventCheckIn(
+      member.id,
+      user.churchId,
+      event.date,
+      user.id,
+      event.theme,
+    );
+
     return attendance;
   } catch (error: unknown) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
     ) {
+      const existing = await UmugandaEventAttendanceModel.findFirst({
+        where: {
+          eventId: event.id,
+          memberId: member.id,
+        },
+        include: {
+          event: {
+            select: {
+              id: true,
+              date: true,
+              theme: true,
+            },
+          },
+          member: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              nationalId: true,
+            },
+          },
+          church: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      });
+
+      await upsertAttendanceForEventCheckIn(
+        member.id,
+        user.churchId,
+        event.date,
+        user.id,
+        event.theme,
+      );
+
+      if (existing) {
+        return existing;
+      }
+
       throw new ConflictError("Attendance already recorded for this member");
     }
 

@@ -5,6 +5,7 @@ import type {
 } from "@/middlewares/types";
 import {
   createAttendance,
+  listAttendanceForMember,
   listAttendanceForUser,
   updateAttendance,
   type AttendanceFilters,
@@ -48,4 +49,11 @@ export const updateAttendanceController = async (
   );
 
   return pass ? { attendance, pass } : { attendance };
+};
+
+export const listMemberAttendanceController = async (
+  context: AuthenticatedBodyParamsContext<{}, { memberId: string }>,
+) => {
+  const attendance = await listAttendanceForMember(context.paramsData.memberId);
+  return { attendance };
 };

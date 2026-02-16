@@ -9,6 +9,6 @@ export const verifyPassController = async (
   context: AuthenticatedParamsContext<VerifyPassParams>,
 ) => {
   const token = context.paramsData.token;
-  const result = await verifyPassToken(token);
+  const result = await verifyPassToken(context.user, token);
   return result;
 };
