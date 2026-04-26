@@ -1,4 +1,4 @@
-// File: /Volumes/Macintosh HD - Data/sda/sda-backend/app/api/members/route.ts
+// File: /Volumes/Macintosh HD - Data/abadive/sdapass-backend/app/api/members/route.ts
 import * as entry from '../../../../../app/api/members/route.js'
 import type { NextRequest } from 'next/server.js'
 

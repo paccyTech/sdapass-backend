@@ -1,8 +1,8 @@
-// File: /Volumes/Macintosh HD - Data/sda/sda-backend/app/api/church-admins/[adminId]/route.ts
-import * as entry from '../../../../../../app/api/church-admins/[adminId]/route.js'
+// File: /Volumes/Macintosh HD - Data/abadive/sdapass-backend/app/api/members/[memberId]/pass/route.ts
+import * as entry from '../../../../../../../app/api/members/[memberId]/pass/route.js'
 import type { NextRequest } from 'next/server.js'
 
-type TEntry = typeof import('../../../../../../app/api/church-admins/[adminId]/route.js')
+type TEntry = typeof import('../../../../../../../app/api/members/[memberId]/pass/route.js')
 
 // Check that the entry is a valid entry
 checkFields<Diff<{

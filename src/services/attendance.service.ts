@@ -294,15 +294,15 @@ export const listAttendanceForMember = async (memberId: string) => {
   console.log('Found records:', records.length);
 
   // Map to MemberAttendance interface
-  return records.map(record => ({
+  return records.map((record: any) => ({
     id: record.id,
-    date: record.session.date,
+    date: record.session?.date || new Date(),
     status: record.status === AttendanceStatus.APPROVED ? 'Present' : record.status === AttendanceStatus.PENDING ? 'Excused' : 'Absent',
     theme: 'Umuganda Session',
     hours: 1,
     church: {
-      id: record.session.church.id,
-      name: record.session.church.name,
+      id: record.session?.church?.id || 'unknown',
+      name: record.session?.church?.name || 'Unknown Church',
     },
   }));
 };

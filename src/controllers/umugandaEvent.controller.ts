@@ -10,17 +10,19 @@ import {
   createUmugandaEvent,
   deleteUmugandaEvent,
   getUmugandaEventForUser,
+  listFilteredUmugandaEventsForUser,
   listUmugandaEventAttendanceForUser,
   listUmugandaEventsForUser,
   updateUmugandaEvent,
   type CheckInToUmugandaEventInput,
   type CreateUmugandaEventInput,
+  type UmugandaEventFilters,
   type UpdateUmugandaEventInput,
 } from "@/services/umugandaEvent.service";
 import { ValidationError } from "@/lib/errors";
 import { recordAuditLog } from "@/services/audit-log.service";
 
-export const listUmugandaEventsController = async (context: AuthenticatedQueryContext) => {
+export const listUmugandaEventsController = async (context: AuthenticatedQueryContext<any>) => {
   const events = await listUmugandaEventsForUser(context.user);
   return { events };
 };
@@ -160,9 +162,9 @@ export const checkInToUmugandaEventController = async (
     action: "umuganda_event.check_in",
     details: {
       eventId: input.eventId,
-      attendanceId: attendance.id,
-      memberId: attendance.memberId,
-      churchId: attendance.churchId,
+      attendanceId: Array.isArray(attendance) ? attendance[0]?.id : (attendance as any).id,
+      memberId: Array.isArray(attendance) ? attendance[0]?.memberId : (attendance as any).memberId,
+      churchId: Array.isArray(attendance) ? attendance[0]?.churchId : (attendance as any).churchId,
     },
   });
 
@@ -181,4 +183,57 @@ export const listUmugandaEventAttendanceController = async (
   });
 
   return { attendance };
+};
+
+export type UmugandaEventFiltersQuery = {
+  search?: string;
+  churchIds?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  attendanceMin?: string;
+  attendanceMax?: string;
+  theme?: string;
+  location?: string;
+  eventStatus?: 'all' | 'upcoming' | 'past';
+};
+
+export const listFilteredUmugandaEventsController = async (
+  context: AuthenticatedQueryContext<UmugandaEventFiltersQuery>,
+) => {
+  const filters: UmugandaEventFilters = {};
+
+  if (context.queryData.search) filters.search = context.queryData.search;
+  if (context.queryData.churchIds) {
+    filters.churchIds = context.queryData.churchIds.split(',').filter(Boolean);
+  }
+  if (context.queryData.dateFrom) {
+    const date = new Date(context.queryData.dateFrom);
+    if (!Number.isNaN(date.getTime())) {
+      filters.dateFrom = date;
+    }
+  }
+  if (context.queryData.dateTo) {
+    const date = new Date(context.queryData.dateTo);
+    if (!Number.isNaN(date.getTime())) {
+      filters.dateTo = date;
+    }
+  }
+  if (context.queryData.attendanceMin) {
+    const min = parseInt(context.queryData.attendanceMin);
+    if (!Number.isNaN(min)) {
+      filters.attendanceMin = min;
+    }
+  }
+  if (context.queryData.attendanceMax) {
+    const max = parseInt(context.queryData.attendanceMax);
+    if (!Number.isNaN(max)) {
+      filters.attendanceMax = max;
+    }
+  }
+  if (context.queryData.theme) filters.theme = context.queryData.theme;
+  if (context.queryData.location) filters.location = context.queryData.location;
+  if (context.queryData.eventStatus) filters.eventStatus = context.queryData.eventStatus;
+
+  const events = await listFilteredUmugandaEventsForUser(context.user, filters);
+  return { events };
 };

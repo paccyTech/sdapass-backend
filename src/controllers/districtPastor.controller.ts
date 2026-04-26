@@ -42,7 +42,7 @@ export const createDistrictPastorController = async (
 };
 
 export const updateDistrictPastorController = async (
-  context: AuthenticatedBodyContext<UpdateDistrictPastorInput> & { params: { pastorId: string } },
+  context: AuthenticatedBodyContext<any> & { params: { pastorId: string } },
 ) => {
   if (!context.params.pastorId) {
     throw new Error("Pastor id is required");
@@ -83,7 +83,7 @@ export const assignChurchesToPastorController = async (
     user: context.user,
     action: "districtPastor.assignChurches",
     details: {
-      pastorId: pastor.id,
+      pastorId: pastor?.id || 'unknown',
       churchIds,
     },
   });

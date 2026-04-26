@@ -47,27 +47,27 @@ export const createMemberController = async (
 };
 
 export const updateMemberController = async (
-  context: AuthenticatedBodyParamsContext<UpdateMemberInput, { memberId: string }>,
+  context: AuthenticatedBodyContext<any> & { params: { memberId: string } },
 ) => {
-  const memberId = context.paramsData?.memberId;
-  if (!memberId) {
+  if (!context.params.memberId) {
     throw new Error("Member id is required");
   }
 
   const changes = context.body ?? {};
-  const result = await updateMember(context.user, memberId, changes);
+  const result = await updateMember(context.user, context.params.memberId, changes);
 
   await recordAuditLog({
     req: context.req,
     user: context.user,
     action: "member.update",
     details: {
-      memberId,
+      memberId: context.params.memberId,
       churchId: result.member.church?.id ?? null,
       changes,
     },
   });
-  return result;
+
+  return { member: result };
 };
 
 export const deleteMemberController = async (

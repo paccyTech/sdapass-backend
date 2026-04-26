@@ -131,7 +131,11 @@ export const listAuditLogsForUnionAdmin = async (
   const searchWhere = buildSearchWhere(search);
   if (searchWhere) {
     where.AND = where.AND ?? [];
-    where.AND.push(searchWhere);
+    if (Array.isArray(where.AND)) {
+      where.AND.push(searchWhere);
+    } else {
+      where.AND = [where.AND, searchWhere];
+    }
   }
 
   const take = Math.min(Math.max(limit, 1), 100);

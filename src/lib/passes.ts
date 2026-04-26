@@ -103,7 +103,7 @@ export const verifyPassToken = async (token: string) => {
     valid: true,
     passId: pass.id,
     issuedAt: pass.createdAt,
-    sessionDate: pass.attendance.session.date,
-    church: pass.attendance.session.church,
+    sessionDate: pass.attendance?.session?.date,
+    church: pass.attendance?.session?.church,
   } as const;
 };

@@ -303,14 +303,15 @@ export const verifyPassToken = async (user: User, token: string) => {
     };
   } else {
     // If member is not included in the relations, fetch it separately
-    const memberRecord = await prisma.user.findUnique({
-      where: { id: passWithRelations.memberId },
-      select: {
-        firstName: true,
-        lastName: true,
-        nationalId: true,
-      },
-    });
+    if (passWithRelations.memberId) {
+      const memberRecord = await prisma.user.findUnique({
+        where: { id: passWithRelations.memberId },
+        select: {
+          firstName: true,
+          lastName: true,
+          nationalId: true,
+        },
+      });
     
     if (memberRecord) {
       member = {
@@ -320,6 +321,7 @@ export const verifyPassToken = async (user: User, token: string) => {
       };
     }
   }
+  } // Added missing closing brace here
 
   return {
     valid: true,

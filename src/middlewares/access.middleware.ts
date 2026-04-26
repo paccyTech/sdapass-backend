@@ -68,7 +68,7 @@ export const districtAccessMiddleware = (
       return {
         ...context,
         district: (context as DistrictAccessContext).district,
-      } satisfies MiddlewareContext & DistrictAccessContext;
+      } as MiddlewareContext & DistrictAccessContext;
     }
 
     const district = await ensureDistrictAccess(context.user, districtId);
@@ -76,7 +76,7 @@ export const districtAccessMiddleware = (
     return {
       ...context,
       district,
-    } satisfies MiddlewareContext & DistrictAccessContext;
+    } as MiddlewareContext & DistrictAccessContext;
   };
 };
 
@@ -97,7 +97,7 @@ export const churchAccessMiddleware = (
       return {
         ...context,
         church: (context as ChurchAccessContext).church,
-      } satisfies MiddlewareContext & ChurchAccessContext;
+      } as MiddlewareContext & ChurchAccessContext;
     }
 
     const church = await ensureChurchAccess(context.user, churchId);
@@ -105,7 +105,7 @@ export const churchAccessMiddleware = (
     return {
       ...context,
       church,
-    } satisfies MiddlewareContext & ChurchAccessContext;
+    } as MiddlewareContext & ChurchAccessContext;
   };
 };
 
@@ -126,7 +126,7 @@ export const sessionAccessMiddleware = (
       return {
         ...context,
         session: (context as SessionAccessContext).session,
-      } satisfies MiddlewareContext & SessionAccessContext;
+      } as MiddlewareContext & SessionAccessContext;
     }
 
     const session = await ensureSessionAccess(context.user, sessionId);
@@ -134,6 +134,6 @@ export const sessionAccessMiddleware = (
     return {
       ...context,
       session,
-    } satisfies MiddlewareContext & SessionAccessContext;
+    } as MiddlewareContext & SessionAccessContext;
   };
 };

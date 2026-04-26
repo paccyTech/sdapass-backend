@@ -39,14 +39,14 @@ export const createDistrictController = async (
       districtId: district.id,
       name: district.name,
       unionId: district.unionId,
-      location: district.location,
     },
   });
+
   return { district };
 };
 
 export const updateDistrictController = async (
-  context: AuthenticatedBodyContext<UpdateDistrictInput> & { params: { districtId: string } },
+  context: AuthenticatedBodyContext<any> & { params: { districtId: string } },
 ) => {
   if (!context.params.districtId) {
     throw new Error("District id is required");
@@ -70,7 +70,7 @@ export const updateDistrictController = async (
 };
 
 export const deleteDistrictController = async (
-  context: AuthenticatedBodyContext<undefined> & { params: { districtId: string } },
+  context: AuthenticatedContext & { params: { districtId: string } },
 ) => {
   if (!context.params.districtId) {
     throw new Error("District id is required");

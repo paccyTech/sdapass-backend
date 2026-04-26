@@ -170,7 +170,7 @@ const ensureMemberAccess = (
   throw new ForbiddenError("Not allowed to manage members");
 };
 
-export const updateMember = async (user: User, memberId: string, input: UpdateMemberInput) => {
+export const updateMember = async (user: User, memberId: string, input: any) => {
   const existing = await UserModel.findById(memberId, {
     select: {
       id: true,
@@ -187,34 +187,28 @@ export const updateMember = async (user: User, memberId: string, input: UpdateMe
 
   ensureMemberAccess(user, existing);
 
-  const data: Prisma.UserUpdateInput = {};
-
+  const updateData: any = {};
   if (input.firstName !== undefined) {
-    data.firstName = input.firstName;
+    updateData.firstName = input.firstName;
   }
   if (input.lastName !== undefined) {
-    data.lastName = input.lastName;
+    updateData.lastName = input.lastName;
   }
   if (input.phoneNumber !== undefined) {
-    data.phoneNumber = input.phoneNumber;
+    updateData.phoneNumber = input.phoneNumber;
   }
   if (input.email !== undefined) {
-    data.email = input.email;
-  }
-
-  if (Object.keys(data).length === 0) {
-    const member = await UserModel.findById(memberId, { select: memberSelect });
-    return { member };
+    updateData.email = input.email;
   }
 
   try {
-    const member = await UserModel.update({
+    const updated = await UserModel.update({
       where: { id: memberId },
-      data,
+      data: updateData,
       select: memberSelect,
     });
 
-    return { member };
+    return { member: toMemberSummary(updated as any) };
   } catch (error: unknown) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&

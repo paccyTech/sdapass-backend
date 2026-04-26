@@ -1,7 +1,9 @@
 {
-  "/api/reports/attendance/route": "app/api/reports/attendance/route.js",
-  "/api/umuganda-events/route": "app/api/umuganda-events/route.js",
-  "/api/attendance/route": "app/api/attendance/route.js",
   "/api/churches/[churchId]/route": "app/api/churches/[churchId]/route.js",
-  "/api/members/route": "app/api/members/route.js"
+  "/api/auth/login/route": "app/api/auth/login/route.js",
+  "/api/umuganda-events/route": "app/api/umuganda-events/route.js",
+  "/api/umuganda-events/[eventId]/route": "app/api/umuganda-events/[eventId]/route.js",
+  "/api/umuganda-events/[eventId]/attendance/route": "app/api/umuganda-events/[eventId]/attendance/route.js",
+  "/api/members/route": "app/api/members/route.js",
+  "/api/attendance/route": "app/api/attendance/route.js"
 }

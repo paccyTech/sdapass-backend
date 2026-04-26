@@ -1,4 +1,4 @@
-import { AttendanceStatus, type Prisma, type User } from "@prisma/client";
+import { AttendanceStatus, Prisma, type User } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { ForbiddenError, NotFoundError, ConflictError } from "@/lib/errors";
@@ -412,6 +412,108 @@ export interface CheckInToUmugandaEventInput {
   token: string;
 }
 
+export interface UmugandaEventFilters {
+  search?: string;
+  churchIds?: string[];
+  dateFrom?: Date;
+  dateTo?: Date;
+  attendanceMin?: number;
+  attendanceMax?: number;
+  theme?: string;
+  location?: string;
+  eventStatus?: 'all' | 'upcoming' | 'past';
+}
+
+export const listFilteredUmugandaEventsForUser = async (
+  user: User,
+  filters: UmugandaEventFilters = {}
+) => {
+  const unionId = await resolveUnionIdForUser(user);
+  
+  const where: any = { unionId };
+
+  // Search filter
+  if (filters.search) {
+    where.OR = [
+      { theme: { contains: filters.search, mode: 'insensitive' } },
+      { location: { contains: filters.search, mode: 'insensitive' } },
+    ];
+  }
+
+  // Date range filter
+  if (filters.dateFrom || filters.dateTo) {
+    where.date = {};
+    if (filters.dateFrom) {
+      where.date.gte = filters.dateFrom;
+    }
+    if (filters.dateTo) {
+      where.date.lte = filters.dateTo;
+    }
+  }
+
+  // Theme filter
+  if (filters.theme) {
+    where.theme = { contains: filters.theme, mode: 'insensitive' };
+  }
+
+  // Location filter
+  if (filters.location) {
+    where.location = { contains: filters.location, mode: 'insensitive' };
+  }
+
+  // Event status filter
+  const now = new Date();
+  if (filters.eventStatus === 'upcoming') {
+    where.date = { ...where.date, gte: now };
+  } else if (filters.eventStatus === 'past') {
+    where.date = { ...where.date, lt: now };
+  }
+
+  const events = await UmugandaEventModel.findMany({
+    where,
+    include: {
+      ...eventInclude,
+      attendance: {
+        include: {
+          church: {
+            select: { id: true, name: true },
+          },
+        },
+      },
+    },
+    orderBy: { date: 'desc' },
+  });
+
+  // Apply attendance filter and church filter after query (since they're based on attendance data)
+  let filteredEvents = events;
+
+  // Attendance filter
+  if (filters.attendanceMin !== undefined || filters.attendanceMax !== undefined) {
+    filteredEvents = filteredEvents.filter((event: any) => {
+      const attendance = (event as any)._count?.attendance || 0;
+      if (filters.attendanceMin !== undefined && attendance < filters.attendanceMin) {
+        return false;
+      }
+      if (filters.attendanceMax !== undefined && attendance > filters.attendanceMax) {
+        return false;
+      }
+      return true;
+    });
+  }
+
+  // Church filter
+  if (filters.churchIds && filters.churchIds.length > 0) {
+    filteredEvents = filteredEvents.filter((event: any) => {
+      if (!event.attendance || event.attendance.length === 0) {
+        return false;
+      }
+      return event.attendance.some((att: any) => filters.churchIds!.includes(att.churchId));
+    });
+  }
+
+  return filteredEvents;
+};
+
 export const checkInToUmugandaEvent = async (user: User, input: CheckInToUmugandaEventInput) => {
   if (user.role !== "CHURCH_ADMIN") {
     throw new ForbiddenError("Only church admins can record event attendance");
@@ -518,7 +620,7 @@ export const checkInToUmugandaEvent = async (user: User, input: CheckInToUmugand
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
     ) {
-      const existing = await UmugandaEventAttendanceModel.findFirst({
+      const existing = await UmugandaEventAttendanceModel.findMany({
         where: {
           eventId: event.id,
           memberId: member.id,
@@ -546,6 +648,7 @@ export const checkInToUmugandaEvent = async (user: User, input: CheckInToUmugand
             },
           },
         },
+        take: 1,
       });
 
       await upsertAttendanceForEventCheckIn(

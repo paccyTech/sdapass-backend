@@ -117,6 +117,7 @@ export const createChurch = async (user: User, input: CreateChurchInput) => {
 
 export const getChurchForUser = async (user: User, churchId: string) => {
   const church = await ChurchModel.findById(churchId, {
+    where: { id: churchId },
     include: churchInclude,
   });
 
@@ -150,6 +151,7 @@ export const getChurchForUser = async (user: User, churchId: string) => {
 
 export const updateChurch = async (user: User, churchId: string, input: UpdateChurchInput) => {
   const church = await ChurchModel.findById(churchId, {
+    where: { id: churchId },
     include: {
       district: {
         include: {
@@ -219,6 +221,7 @@ export const updateChurch = async (user: User, churchId: string, input: UpdateCh
 
 export const deleteChurch = async (user: User, churchId: string) => {
   const church = await ChurchModel.findById(churchId, {
+    where: { id: churchId },
     include: {
       district: {
         include: {
