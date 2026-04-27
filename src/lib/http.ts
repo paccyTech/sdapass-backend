@@ -86,7 +86,7 @@ const parseAllowedOrigins = () => {
     .map((value) => normalizeOrigin(value));
 };
 
-const applyCors = (response: NextResponse, request?: Request) => {
+export const applyCors = (response: NextResponse, request?: Request) => {
   const allowedOrigins = parseAllowedOrigins();
 
   if (!allowedOrigins.length) {
